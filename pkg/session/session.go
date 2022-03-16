@@ -38,7 +38,8 @@ type Session struct {
 
 func NewInviteSession(reqcb RequestCallback, uaType string,
 	contact *sip.ContactHeader, req sip.Request, cid sip.CallID,
-	tx sip.Transaction, dir Direction, logger log.Logger) *Session {
+	tx sip.Transaction, dir Direction, logger log.Logger,
+	genTag func() string) *Session {
 	s := &Session{
 		requestCallbck: reqcb,
 		uaType:         uaType,
@@ -55,8 +56,8 @@ func NewInviteSession(reqcb RequestCallback, uaType string,
 	to, _ := req.To()
 	from, _ := req.From()
 
-	if to.Params != nil && !to.Params.Has("tag") {
-		to.Params.Add("tag", sip.String{Str: util.RandString(8)})
+	if to.Params != nil && !to.Params.Has("tag") && uatype == "UAS" {
+		to.Params.Add("tag", sip.String{Str: genTag()})
 		req.RemoveHeader("To")
 		req.AppendHeader(to)
 	}
