@@ -129,7 +129,7 @@ func main() {
 		logger.Error(err)
 	}
 
-	go ua.Invite(profile, called, recipient, &sdp)
+	go ua.Invite(profile, called, recipient, &sdp, []sip.Header{})
 
 	<-stop
 
