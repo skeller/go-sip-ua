@@ -9,7 +9,6 @@ import (
 	"github.com/cloudwebrtc/go-sip-ua/pkg/utils"
 	"github.com/ghettovoice/gosip/log"
 	"github.com/ghettovoice/gosip/sip"
-	"github.com/ghettovoice/gosip/util"
 )
 
 type RequestCallback func(ctx context.Context, request sip.Request, authorizer sip.Authorizer, waitForResult bool, attempt int) (sip.Response, error)
@@ -21,6 +20,7 @@ type Session struct {
 	callID         sip.CallID
 	offer          string
 	answer         string
+	lateOffer      bool
 	request        sip.Request
 	response       sip.Response
 	transaction    sip.Transaction
@@ -39,7 +39,7 @@ type Session struct {
 func NewInviteSession(reqcb RequestCallback, uaType string,
 	contact *sip.ContactHeader, req sip.Request, cid sip.CallID,
 	tx sip.Transaction, dir Direction, logger log.Logger,
-	genTag func() string) *Session {
+	genTag func() sip.MaybeString) *Session {
 	s := &Session{
 		requestCallbck: reqcb,
 		uaType:         uaType,
@@ -56,8 +56,8 @@ func NewInviteSession(reqcb RequestCallback, uaType string,
 	to, _ := req.To()
 	from, _ := req.From()
 
-	if to.Params != nil && !to.Params.Has("tag") && uatype == "UAS" {
-		to.Params.Add("tag", sip.String{Str: genTag()})
+	if to.Params != nil && !to.Params.Has("tag") && uaType == "UAS" {
+		to.Params.Add("tag", genTag())
 		req.RemoveHeader("To")
 		req.AppendHeader(to)
 	}
@@ -226,7 +226,7 @@ func (s *Session) StoreResponse(response sip.Response) {
 				s.remoteTarget = ct.Address
 			}
 			if response.IsSuccess() || response.IsProvisional() {
-				if s.Status() != Confirmed && (response.Method() == sip.INVITE || response.Method() == sip.SUBSCRIBE) {
+				if s.Status() != Confirmed && (s.request.Method() == sip.INVITE || s.request.Method() == sip.SUBSCRIBE) {
 					s.routeSet = nil
 					s.StoreRouteSet(response, true)
 				}
@@ -235,7 +235,13 @@ func (s *Session) StoreResponse(response sip.Response) {
 
 		sdp := response.Body()
 		if len(sdp) > 0 {
-			s.answer = sdp
+			if len(s.offer) > 0 {
+				s.answer = sdp
+			} else {
+				// late offer/answer
+				s.lateOffer = true
+				s.offer = sdp
+			}
 		}
 	}
 	s.response = response

@@ -27,7 +27,7 @@ func GetBranchID(msg sip.Message) sip.MaybeString {
 }
 
 func GetFromTag(msg sip.Message) sip.MaybeString {
-	if from, ok := msg.FromHeader(); ok {
+	if from, ok := msg.From(); ok {
 		if tag, ok := from.Params.Get("tag"); ok {
 			return tag
 		}
@@ -37,7 +37,7 @@ func GetFromTag(msg sip.Message) sip.MaybeString {
 }
 
 func GetToTag(msg sip.Message) sip.MaybeString {
-	if to, ok := msg.ToHeader(); ok {
+	if to, ok := msg.To(); ok {
 		if tag, ok := to.Params.Get("tag"); ok {
 			return tag
 		}
